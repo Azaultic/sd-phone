@@ -1,180 +1,95 @@
+<div align="center">
+
 # sd-phone
 
-iOS-themed in-game phone for FiveM. **v0.1 scaffold** — ships the
-lockscreen and homescreen only, with every app icon wired to a Lua
-callback that's currently a no-op. App surfaces (Phone, Messages,
-Safari, …) are deferred to v0.2.
+**An iOS-themed smartphone for FiveM. 45+ server-backed apps, real app accounts, a live game-view camera, online multiplayer games, and drop-in lb-phone compatibility.**
 
-The phone is built around a real iPhone bezel image
-(`iphone_regular.png`) rendered as an opaque overlay; the React app
-paints inside the screen cutout. Status bar, lockscreen, and
-homescreen are all hand-rolled — no off-the-shelf phone library.
+[![Release](https://img.shields.io/github/v/release/Samuels-Development/sd-phone?label=Release&logo=github)](https://github.com/Samuels-Development/sd-phone/releases)
+[![Downloads](https://img.shields.io/github/downloads/Samuels-Development/sd-phone/total?label=Downloads&logo=github&color=94DD0C)](https://github.com/Samuels-Development/sd-phone/releases)
+[![Stars](https://img.shields.io/github/stars/Samuels-Development/sd-phone?label=Stars&logo=github)](https://github.com/Samuels-Development/sd-phone/stargazers)
+[![Discord](https://img.shields.io/discord/842045164951437383?label=Discord&logo=discord&logoColor=white)](https://discord.gg/FzPehMQaBQ)
+[![Documentation](https://img.shields.io/badge/Docs-docs.samueldev.shop-94DD0C)](https://docs.samueldev.shop/resources/phone/)
+
+![Framework](https://img.shields.io/badge/Framework-QBCore%20%7C%20QBox%20%7C%20ESX-3b82f6)
+![Voice](https://img.shields.io/badge/Voice-pma--voice-3b82f6)
+![Compatibility](https://img.shields.io/badge/lb--phone-drop--in%20compatible-3b82f6)
+
+[**Documentation**](https://docs.samueldev.shop/resources/phone/) · [**Store**](https://fivem.samueldev.shop) · [**Discord**](https://discord.gg/FzPehMQaBQ)
+
+</div>
+
+---
+
+## Overview
+
+sd-phone is a complete smartphone experience: lockscreen with passcode and Face Unlock, customizable homescreen with a real app switcher, notification banners with persistent server-authoritative unread badges, and a full catalog of apps backed by their own server modules. The UI is a React app rendered inside a real iPhone bezel; the phone is held as an in-hand prop, tints to the colour of the phone item you used, and keeps working while you walk.
+
+Everything player-facing is translatable, apps resume where you left them, and the phone auto-detects your framework, inventory, banking, housing, garage, and voice resources with zero config flags.
+
+## Apps
+
+| | |
+|---|---|
+| **Communication** | Phone (1:1, group and company calls over pma-voice), Messages (SMS, group threads, GIFs, money and location cards), Mail (multi-account, global inboxes), Groups, Dark Chat, Radio, Find Friends |
+| **Social** | Photogram (posts, stories, DMs, real live video streaming), Birdy, Cherry, Vibez, Streaks, all on a shared accounts engine with registration, sign-in, and password resets delivered in-game |
+| **Camera & media** | Camera (live game view: photos, video with voice capture, selfie mode), Photos, Music (with AirShare library sharing), Voice Memos |
+| **World** | Maps (CDN-streamed tiles, routing, pins), Garages, Homes, Wallet, Services (company directory, dispatch messaging, phone multijob), Ryde (player-to-player ride hailing), Weazel News, Pages, Marketplace, Review, Weather, Stocks |
+| **Games** | Chess, Connect Four, Battleship and Wordle with online lobbies, plus Blackjack, Cookie, Flappy, Blocks, Climber and Rail Runner with server-side leaderboards |
+| **Utilities** | Clock (alarms), Calendar, Notes (with sketches), Calculator, Compass, Health, Passwords, App Store, Settings |
+
+## Highlights
+
+- **Real accounts engine.** Social apps use actual registration and login, with verification codes and password resets delivered by in-game mail or SMS. Accounts are global, not per-character-slot.
+- **Live game-view camera.** The Camera app renders the world into the phone screen in real time; video clips record your microphone and nearby players' voices.
+- **Photogram Live.** Stream real encoded video to other players' phones, with clean late-joins.
+- **Deep world integration.** Garages and Homes bridge across ten-plus garage and housing systems; Wallet reads your framework bank; Services maps jobs to callable, messageable companies; Weather mirrors the in-game sky.
+- **lb-phone drop-in compatibility.** Third-party scripts written against lb-phone's exports and events keep working unmodified, and a one-command migrator imports lb-phone player data. See the [compatibility docs](https://docs.samueldev.shop/resources/phone/lb-phone-compatibility).
+
+## For developers
+
+The phone ships a full integration surface, documented at [docs.samueldev.shop](https://docs.samueldev.shop/resources/phone/):
+
+- [Server exports](https://docs.samueldev.shop/resources/phone/exports-server) for sending mail, messages and notifications, starting calls, managing contacts, resolving numbers to players, logging transactions, posting news, and more.
+- [Client exports](https://docs.samueldev.shop/resources/phone/exports-client) for opening the phone, deep-linking into apps, and gating phone use.
+- [First-party events](https://docs.samueldev.shop/resources/phone/events-server) on every lifecycle moment: messages, mail, calls, transactions, posts, contacts.
+- [lb-phone compatibility](https://docs.samueldev.shop/resources/phone/lb-phone-compatibility) covering exports, events, and `dependency 'lb-phone'` lines.
+
+```lua
+-- A taste: text a player from a job script
+exports['sd-phone']:sendSystemMessage('555-0199', 'LS Dispatch', targetNumber, 'New tow request at Legion Square.')
+
+-- React to any SMS being sent
+AddEventHandler('sd-phone:server:messages:sent', function(m)
+    print(('%s texted %s'):format(m.senderNumber, m.targetNumber))
+end)
+```
 
 ## Compatibility
 
-| Layer        | Supported                                                                                  |
-|--------------|--------------------------------------------------------------------------------------------|
-| Frameworks   | QBCore, QBox, ESX                                                                          |
-| Inventories  | ox_inventory, tgiann-inventory, qb-inventory, qs-inventory(-pro), origen_inventory, codem-inventory, jaksam_inventory, lj-inventory, ps-inventory |
-| Notify       | ox_lib (default), lation_ui (opt-in), framework-native fallback                            |
-
-Dependencies: `ox_lib`. Detection is automatic — no config flags
-required.
+| Layer | Supported |
+|---|---|
+| Frameworks | QBCore, QBox, ESX (auto-detected) |
+| Inventories | ox_inventory, tgiann-inventory, qb-inventory, qs-inventory(-pro), origen_inventory, codem-inventory, jaksam_inventory, lj-inventory, ps-inventory |
+| Voice | pma-voice |
+| Housing | 9 housing systems for the Homes app |
+| Garages | 10 garage systems for the Garages app |
+| Notify | ox_lib (default), lation_ui (opt-in), framework-native fallback |
 
 ## Installation
 
-1. Drop `sd-phone` into `resources/[standalone]/`.
-2. Add the phone items to your inventory's items table (the bundled
-   `ox_inventory` ships `phone` + `phone_red`). Each must point its
-   `server.export` at `sd-phone.use<ItemName>` and set `consume = 0`.
-   Map item → frame colour in `Config.Phone.Items` (`configs/config.lua`).
-3. Add `ensure sd-phone` and `ensure sd-phone-props` to `server.cfg`
-   (the props pack streams the in-hand phone models).
-4. (Optional) Rebuild the React app — see *Building the UI* below.
+Full guide: [docs.samueldev.shop/resources/phone/installation](https://docs.samueldev.shop/resources/phone/installation)
 
-The pre-built bundle ships at `web/build/`, so a fresh clone runs
-without `npm install`.
+1. Drop `sd-phone` into your resources folder and ensure it after `ox_lib` and `oxmysql`. Database tables create themselves on first boot.
+2. Ensure `sd-phone-props` (streams the in-hand phone models).
+3. Add the phone items to your inventory, one per frame colour (`phone`, `phone_blue`, `phone_green`, `phone_orange`, `phone_pink`, `phone_purple`, `phone_red`, `phone_yellow`), each pointing `server.export` at `sd-phone.use<ItemName>` with `consume = 0`. Players can also open with the keybind (default F1), gated on owning a phone item.
+4. Optionally set your API keys in `configs/server/apikeys.lua` (GIPHY for the GIF picker, Fivemanage for media uploads).
 
-## How players use it
+The pre-built UI ships at `web/build/`, so a fresh clone runs without touching npm. To rebuild after UI changes: `cd web && npm install && npm run build`.
 
-* Use a phone item from inventory — one per frame colour: `phone`
-  (black), `phone_blue`, `phone_green`, `phone_orange`, `phone_pink`,
-  `phone_purple`, `phone_red`, `phone_yellow`. The frame colour and the
-  in-hand prop match the variant you used. **Or**
-  press `F1` (rebindable via Settings → Key Bindings → FiveM), which
-  opens only if you own a phone item (else "You don't have a phone.").
-  There is no `/phone` chat command.
-* The phone opens on the lockscreen. Swipe up (drag from the lower
-  half of the screen) or press `Enter` to unlock.
-* The homescreen shows the app grid + a four-slot dock. Tapping an app
-  fires the `sd-phone:openApp` NUI callback — Lua logs it but takes no
-  action in v0.1.
-* `Esc` (or `F1` again) closes the phone.
+---
 
-## Configuration
+<div align="center">
 
-All tunables live under `configs/config.lua`:
+**[Documentation](https://docs.samueldev.shop/resources/phone/)** · **[Store](https://fivem.samueldev.shop)** · **[Discord](https://discord.gg/FzPehMQaBQ)**
 
-| Section           | Purpose                                                                                                  |
-|-------------------|----------------------------------------------------------------------------------------------------------|
-| `Phone`           | Inventory items → frame colours, default keybind, prop prefix, dead/swim blockers.                       |
-| `Lockscreen`      | Wallpaper preset, 24h-clock toggle, date-row visibility.                                                 |
-| `Homescreen`      | Wallpaper preset, dock contents, full app list (id / label / icon / route / accent colour).              |
-| `StatusBar`       | Cosmetic carrier text, signal bars, Wi-Fi glyph, starting battery percentage.                            |
-
-Wallpapers are CSS-gradient presets by default — drop a JPG into
-`web/public/wallpapers/` and reference its filename from `Wallpaper`
-to override.
-
-## Architecture
-
-```
-sd-phone/
-├── fxmanifest.lua
-├── README.md
-├── iphone_regular.png         iPhone bezel asset (consumed by web/)
-├── bridge/                    Multi-framework / inventory / notify bridge
-│   ├── shared/                  framework + inventory_id detection + locale loader
-│   ├── client/                  notify, target, inventory shims
-│   └── server/                  player, notify, inventory, money, job, gang, version
-├── configs/
-│   └── config.lua             Phone, Lockscreen, Homescreen, StatusBar tunables
-├── locales/
-│   └── en.json                UI/notification strings
-├── client/
-│   └── main.lua               Open/close state, keybind, NUI callbacks, battery tick
-├── server/
-│   └── main.lua               Usable phone-item registration + keybind ownership callback + boot banner
-└── web/                       React / TS / Tailwind UI
-    ├── package.json, vite.config.ts, tsconfig.json, tailwind.config.cjs, postcss.config.cjs
-    ├── index.html             Vite dev entry
-    ├── src/                    imports use the `@/` alias (= src/) across group boundaries
-    │   ├── main.tsx, App.tsx, index.css              entry points
-    │   ├── core/               NUI plumbing: nui.ts, api.ts, types.ts, dev.ts, accountsApi.ts
-    │   ├── shell/              the phone OS: PhoneShell, StatusBar, Lockscreen, Homescreen,
-    │   │                       ControlCenter, AppSwitcher, app icons/badges, appRegistry,
-    │   │                       wallpapers, frameColors, deeplink, SetupFlow
-    │   ├── ui/                 reusable iOS primitives: Sheet, AlertDialog, TabBar, SearchBar, …
-    │   ├── shared/             cross-app features: AppAuth, ContactPicker/Avatar, AirShare, ShareSheet
-    │   ├── apps/               one folder per app (plus _games/ and _classifieds toolkits)
-    │   ├── media/              capture: audioMixer, nearbyVoice, shutter
-    │   ├── render/             live game-view renderer (vendored three fork + GameRender)
-    │   ├── hooks/, stores/, lib/, i18n/, assets/
-    └── build/                              Pre-built bundle (committed)
-```
-
-### NUI message flow
-
-| Direction        | Channel                          | Payload                                                          |
-|------------------|----------------------------------|------------------------------------------------------------------|
-| Lua  → React     | `SendNUIMessage('sd-phone:open')`    | `OpenPayload` (config, dock, apps, wallpapers, status bar state) |
-| Lua  → React     | `SendNUIMessage('sd-phone:close')`   | (no payload)                                                     |
-| Lua  → React     | `SendNUIMessage('sd-phone:battery')` | `number` (0..100)                                                |
-| React → Lua      | `fetchNui('sd-phone:close')`         | (no payload)                                                     |
-| React → Lua      | `fetchNui('sd-phone:unlock')`        | (no payload)                                                     |
-| React → Lua      | `fetchNui('sd-phone:openApp')`       | `{ id, route }`                                                  |
-
-### Net events
-
-| Event                            | Direction        | Payload      |
-|----------------------------------|------------------|--------------|
-| `sd-phone:client:openFromItem`   | server → client  | `color` (frame colour of the used item) |
-| `sd-phone:client:notify`         | server → client  | bridge       |
-
-`lib.callback` `sd-phone:server:phone:resolveOpen(preferred)` → `color | nil`:
-the keybind's server-side ownership gate (returns the colour to open with, or
-`nil` when the player holds no phone item).
-
-### Exports
-
-| Export       | Returns                  |
-|--------------|--------------------------|
-| `isOpen()`   | `boolean`                |
-| `isLocked()` | `boolean`                |
-| `open()`     | opens the phone for the calling client |
-| `close()`    | closes the phone         |
-
-## Building the UI
-
-The shipped `web/build/` was produced by Vite. To customise:
-
-```bash
-cd web
-npm install
-npm run dev        # local dev server with mock NUI data injected
-npm run build      # writes web/build/index.html + assets/
-```
-
-The dev server (`npm run dev`) injects an `OpenPayload` immediately on
-boot so the lockscreen renders against mock data. Keyboard shortcuts:
-
-* `Enter` / `Space` / `H` — skip the unlock swipe.
-* `L` — relock without closing the phone.
-* `Esc` — close the phone.
-
-For local previewing without FiveM, open `web/build/index.html`
-directly — the bundle detects the missing `GetParentResourceName` and
-auto-injects mock data.
-
-## Notes
-
-* **App surfaces are stubbed.** v0.1 ships the lockscreen + homescreen
-  only. Tapping an app icon logs to console; no app screen is mounted.
-* **Wallpapers ship as CSS gradients.** Drop JPGs into
-  `web/public/wallpapers/` and reference them from config to swap in
-  real artwork without rebuilding.
-* **Battery is cosmetic.** Drains ~1% per 30s while the phone is open,
-  resets to `Config.StatusBar.BatteryStart` on each open. No physical
-  battery model.
-* **Single-page homescreen.** Static second-page dot rendered for
-  visual parity but no second page exists yet. Page swipe pending.
-
-## Credits
-
-* Bridge structure copied wholesale from [`sd-pettycrime`](https://docs.sd-scripts.com/).
-* Coding style modelled on [`sd-pointcontrol`](https://docs.sd-scripts.com/) —
-  modular per-domain folders, ox_lib `require` chains from entry
-  points, NUI snapshot broadcast.
-* iPhone bezel asset cropped + alpha-keyed from a public iPhone 14 Pro
-  mockup PNG (`iphone_regular.png` at the resource root, kept for
-  reference).
+</div>
