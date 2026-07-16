@@ -1,0 +1,310 @@
+---@type table Store module; the table returned at end of file.
+local store = {}
+
+
+local util = require 'server.util'
+local function newId() return util.newId(7) end
+
+store.newId = newId
+
+---Create the contacts, call-log, and blocked-numbers tables idempotently, so the resource is
+---drop-in. Run once at boot. `phone_calls` stores `called_at` as a unix epoch (BIGINT) so the
+---React side owns all relative-date formatting; `phone_blocked` maps a player (citizenid) to
+---each phone number (bare digits) they've blocked. Two backfills cover servers whose tables
+---predate newer columns: `avatar` on phone_contacts, and `seen` on phone_calls (whether a
+---missed call has been acknowledged in the Phone app). `seen` is added with DEFAULT 1 so every
+---pre-existing missed call counts as already acknowledged - old logs don't all light the badge
+---at once - then the default is flipped to 0 for rows inserted from that point on.
+function store.ensureSchema()
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS phone_contacts (
+            id          VARCHAR(16)  NOT NULL,
+            citizenid   VARCHAR(64)  NOT NULL,
+            name        VARCHAR(64)  NOT NULL,
+            phone       VARCHAR(32)  NOT NULL,
+            email       VARCHAR(128) NULL,
+            address     VARCHAR(128) NULL,
+            color       VARCHAR(16)  NOT NULL,
+            avatar      VARCHAR(512) NULL,
+            favorite    TINYINT(1)   NOT NULL DEFAULT 0,
+            created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            INDEX idx_phone_contacts_cid (citizenid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ]])
+
+    local col = MySQL.single.await([[
+        SELECT COUNT(*) AS n FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND table_name = 'phone_contacts' AND column_name = 'avatar'
+    ]])
+    if not col or tonumber(col.n) == 0 then
+        MySQL.query.await('ALTER TABLE phone_contacts ADD COLUMN avatar VARCHAR(512) NULL AFTER color')
+    end
+
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS phone_calls (
+            id          VARCHAR(16)  NOT NULL,
+            citizenid   VARCHAR(64)  NOT NULL,
+            `number`    VARCHAR(32)  NOT NULL,
+            name        VARCHAR(64)  NULL,
+            direction   VARCHAR(16)  NOT NULL,
+            duration    INT          NOT NULL DEFAULT 0,
+            seen        TINYINT(1)   NOT NULL DEFAULT 0,
+            called_at   BIGINT       NOT NULL,
+            PRIMARY KEY (id),
+            INDEX idx_phone_calls_cid (citizenid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ]])
+
+    local seenCol = MySQL.single.await([[
+        SELECT COUNT(*) AS n FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND table_name = 'phone_calls' AND column_name = 'seen'
+    ]])
+    if not seenCol or tonumber(seenCol.n) == 0 then
+        MySQL.query.await('ALTER TABLE phone_calls ADD COLUMN seen TINYINT(1) NOT NULL DEFAULT 1 AFTER duration')
+        MySQL.query.await('ALTER TABLE phone_calls ALTER COLUMN seen SET DEFAULT 0')
+    end
+
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS phone_blocked (
+            citizenid  VARCHAR(64) NOT NULL,
+            number     VARCHAR(32) NOT NULL,
+            created_at TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (citizenid, number)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ]])
+end
+
+---Normalise any value to its bare digits ('' when nil or digit-free), matching how blocked
+---numbers are stored.
+---@param s any
+---@return string
+local function digitsOf(s) return (tostring(s or ''):gsub('%D', '')) end
+
+---True if `number` is on the owner's block list. Garbage input (no citizenid, no digits) is
+---never blocked rather than an error.
+---@param citizenid string
+---@param number string
+---@return boolean
+function store.isBlocked(citizenid, number)
+    if not citizenid or citizenid == '' then return false end
+    local d = digitsOf(number)
+    if d == '' then return false end
+    local row = MySQL.single.await(
+        'SELECT 1 AS hit FROM phone_blocked WHERE citizenid = ? AND number = ? LIMIT 1',
+        { citizenid, d }
+    )
+    return row ~= nil
+end
+
+---Add a number to the owner's block list. Idempotent (upsert), and a silent no-op on garbage
+---input (no citizenid, no digits, or more digits than the column's VARCHAR(32) can hold - no
+---real number is that long, and letting it through would fail the insert) so callers can
+---fire-and-forget.
+---@param citizenid string
+---@param number string
+function store.blockNumber(citizenid, number)
+    local d = digitsOf(number)
+    if not citizenid or citizenid == '' or d == '' or #d > 32 then return end
+    MySQL.update.await([[
+        INSERT INTO phone_blocked (citizenid, number) VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE number = VALUES(number)
+    ]], { citizenid, d })
+end
+
+---Remove a number from the owner's block list. Idempotent; a silent no-op on garbage input.
+---@param citizenid string
+---@param number string
+function store.unblockNumber(citizenid, number)
+    local d = digitsOf(number)
+    if not citizenid or citizenid == '' or d == '' then return end
+    MySQL.update.await('DELETE FROM phone_blocked WHERE citizenid = ? AND number = ?', { citizenid, d })
+end
+
+---List every contact owned by a player, alphabetised server-side. Read-only.
+---@param citizenid string
+---@return table[]
+function store.listContacts(citizenid)
+    return MySQL.query.await([[
+        SELECT id, name, phone, email, address, color, avatar, favorite
+        FROM phone_contacts
+        WHERE citizenid = ?
+        ORDER BY name ASC
+    ]], { citizenid }) or {}
+end
+
+---Read one contact, scoped to its owner. nil if missing or not theirs, so a crafted id can't
+---read another player's row. Read-only.
+---@param id string
+---@param citizenid string
+---@return table|nil
+function store.getContact(id, citizenid)
+    if not id or id == '' then return nil end
+    return MySQL.single.await([[
+        SELECT id, name, phone, email, address, color, avatar, favorite
+        FROM phone_contacts
+        WHERE id = ? AND citizenid = ?
+    ]], { id, citizenid })
+end
+
+---Count a player's contacts for the per-player cap check. Read-only.
+---@param citizenid string
+---@return number
+function store.countContacts(citizenid)
+    local row = MySQL.single.await(
+        'SELECT COUNT(*) AS n FROM phone_contacts WHERE citizenid = ?',
+        { citizenid }
+    )
+    return row and tonumber(row.n) or 0
+end
+
+---Insert a new contact row. Fields arrive already validated + length-capped by the actions
+---layer; the data layer stays dumb.
+---@param id string
+---@param citizenid string
+---@param c { name: string, phone: string, email: string|nil, address: string|nil, color: string, avatar: string|nil }
+---@return boolean
+function store.insertContact(id, citizenid, c)
+    local affected = MySQL.insert.await([[
+        INSERT INTO phone_contacts (id, citizenid, name, phone, email, address, color, avatar)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ]], { id, citizenid, c.name, c.phone, c.email, c.address, c.color, c.avatar })
+    return affected ~= nil
+end
+
+---Update an existing contact's editable fields. The citizenid in the WHERE clause is the
+---ownership boundary - someone else's row matches zero rows and reports failure.
+---@param id string
+---@param citizenid string
+---@param c { name: string, phone: string, email: string|nil, address: string|nil, avatar: string|nil }
+---@return boolean
+function store.updateContact(id, citizenid, c)
+    local affected = MySQL.update.await([[
+        UPDATE phone_contacts
+        SET name = ?, phone = ?, email = ?, address = ?, avatar = ?
+        WHERE id = ? AND citizenid = ?
+    ]], { c.name, c.phone, c.email, c.address, c.avatar, id, citizenid })
+    return (affected or 0) > 0
+end
+
+---Hard-delete a contact. The citizenid in the WHERE clause is the ownership boundary.
+---@param id string
+---@param citizenid string
+---@return boolean
+function store.deleteContact(id, citizenid)
+    local affected = MySQL.update.await(
+        'DELETE FROM phone_contacts WHERE id = ? AND citizenid = ?',
+        { id, citizenid }
+    )
+    return (affected or 0) > 0
+end
+
+---Set a contact's favourite flag. The citizenid in the WHERE clause is the ownership boundary.
+---@param id string
+---@param citizenid string
+---@param favorite boolean
+---@return boolean
+function store.setFavorite(id, citizenid, favorite)
+    local affected = MySQL.update.await(
+        'UPDATE phone_contacts SET favorite = ? WHERE id = ? AND citizenid = ?',
+        { favorite and 1 or 0, id, citizenid }
+    )
+    return (affected or 0) > 0
+end
+
+---List a player's recent calls, newest first, capped at `limit`. The cap is a validated integer
+---interpolated into the query - never client text - because MySQL rejects a bound parameter in
+---`LIMIT` on prepared statements. Read-only.
+---@param citizenid string
+---@param limit number
+---@return table[]
+function store.listCalls(citizenid, limit)
+    local n = math.floor(tonumber(limit) or 50)
+    if n < 1 then n = 1 end
+    return MySQL.query.await(([[
+        SELECT id, `number` AS number, name, direction, duration, called_at
+        FROM phone_calls
+        WHERE citizenid = ?
+        ORDER BY called_at DESC
+        LIMIT %d
+    ]]):format(n), { citizenid }) or {}
+end
+
+---Insert a call-log entry. Fields arrive already validated + length-capped by the actions
+---layer; the data layer stays dumb.
+---@param id string
+---@param citizenid string
+---@param call { number: string, name: string|nil, direction: string, duration: number, calledAt: number }
+---@return boolean
+function store.insertCall(id, citizenid, call)
+    local affected = MySQL.insert.await([[
+        INSERT INTO phone_calls (id, citizenid, `number`, name, direction, duration, called_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ]], { id, citizenid, call.number, call.name, call.direction, call.duration, call.calledAt })
+    return affected ~= nil
+end
+
+---Prune a player's call log down to the newest `keep` rows, so the log stays bounded. The
+---double-nested subquery is the standard workaround for MySQL's "can't LIMIT inside an IN
+---subquery" restriction; like listCalls, the validated integer is interpolated because LIMIT
+---can't be a bound parameter.
+---@param citizenid string
+---@param keep number
+function store.pruneCalls(citizenid, keep)
+    local n = math.floor(tonumber(keep) or 100)
+    if n < 1 then n = 1 end
+    MySQL.update.await(([[
+        DELETE FROM phone_calls
+        WHERE citizenid = ?
+          AND id NOT IN (
+              SELECT id FROM (
+                  SELECT id FROM phone_calls
+                  WHERE citizenid = ?
+                  ORDER BY called_at DESC
+                  LIMIT %d
+              ) AS keep_rows
+          )
+    ]]):format(n), { citizenid, citizenid })
+end
+
+---Delete a single call-log entry. The citizenid in the WHERE clause is the ownership boundary.
+---@param id string
+---@param citizenid string
+---@return boolean
+function store.deleteCall(id, citizenid)
+    local affected = MySQL.update.await(
+        'DELETE FROM phone_calls WHERE id = ? AND citizenid = ?',
+        { id, citizenid }
+    )
+    return (affected or 0) > 0
+end
+
+---Wipe a player's entire call log. Scoped to its owner; idempotent.
+---@param citizenid string
+function store.clearCalls(citizenid)
+    MySQL.update.await('DELETE FROM phone_calls WHERE citizenid = ?', { citizenid })
+end
+
+---Count a player's unacknowledged missed calls - the home-screen Phone badge number. Read-only.
+---@param citizenid string
+---@return number
+function store.unreadMissedCount(citizenid)
+    local row = MySQL.single.await(
+        "SELECT COUNT(*) AS n FROM phone_calls WHERE citizenid = ? AND direction = 'missed' AND seen = 0",
+        { citizenid }
+    )
+    return row and tonumber(row.n) or 0
+end
+
+---Mark every unseen missed call as acknowledged (the player opened the Phone app), clearing the
+---badge. Scoped to its owner; idempotent.
+---@param citizenid string
+function store.markMissedSeen(citizenid)
+    MySQL.update.await(
+        "UPDATE phone_calls SET seen = 1 WHERE citizenid = ? AND direction = 'missed' AND seen = 0",
+        { citizenid }
+    )
+end
+
+return store

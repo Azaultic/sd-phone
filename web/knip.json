@@ -1,0 +1,12 @@
+{
+    "entry": ["index.html"],
+    "project": ["src/**/*.{ts,tsx}"],
+    "ignore": [
+        "src/render/threeExports.d.ts",
+        "src/stores/index.ts",
+        "src/apps/maps/SheetList.tsx",
+        "src/apps/maps/icons.ts",
+        "src/apps/cherry/ui.tsx"
+    ],
+    "ignoreDependencies": ["playwright"]
+}

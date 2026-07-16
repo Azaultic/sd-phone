@@ -1,0 +1,247 @@
+import {
+    createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
+} from 'react';
+import type { ReactNode } from 'react';
+
+import { youtubeId } from './data';
+import type { Track } from './data';
+
+declare global {
+    interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void }
+}
+
+let ytApiPromise: Promise<void> | null = null;
+function loadYouTubeApi(): Promise<void> {
+    if (typeof window === 'undefined') return Promise.resolve();
+    if (window.YT && window.YT.Player) return Promise.resolve();
+    if (!ytApiPromise) {
+        ytApiPromise = new Promise<void>(resolve => {
+            const prev = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(); };
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(tag);
+        });
+    }
+    return ytApiPromise;
+}
+
+interface MusicCtx {
+    current:  Track | null;
+    playing:  boolean;
+    volume:   number;
+    shuffle:  boolean;
+    repeat:   boolean;
+    play:      (track: Track, queue?: Track[]) => void;
+    stop:      () => void;
+    toggle:    () => void;
+    next:      () => void;
+    prev:      () => void;
+    seek:      (t: number) => void;
+    setVolume: (v: number) => void;
+    setShuffle: (v: boolean) => void;
+    setRepeat:  (v: boolean) => void;
+    requestOpen: () => void;
+    openSignal:  number;
+}
+
+interface MusicProgress {
+    time:     number;
+    duration: number;
+}
+
+const Ctx = createContext<MusicCtx | null>(null);
+export function useMusic(): MusicCtx {
+    const c = useContext(Ctx);
+    if (!c) throw new Error('useMusic must be used within MusicProvider');
+    return c;
+}
+
+const ProgressCtx = createContext<MusicProgress | null>(null);
+export function useMusicProgress(): MusicProgress {
+    const c = useContext(ProgressCtx);
+    if (!c) throw new Error('useMusicProgress must be used within MusicProvider');
+    return c;
+}
+
+const isYt = (t: Track | null) => !!t && youtubeId(t.url) !== null;
+
+export function MusicProvider({ children }: { children: ReactNode }) {
+    const audioRef  = useRef<HTMLAudioElement>(null);
+    const ytHostRef = useRef<HTMLDivElement>(null);
+    const ytRef     = useRef<any>(null);
+    const ytReady   = useRef(false);
+    const handlers  = useRef<{ ended: () => void }>({ ended: () => {} });
+    const wantPlay  = useRef(false);
+    const timeRef   = useRef(0);
+
+    const [current, setCurrent]   = useState<Track | null>(null);
+    const [queue, setQueue]       = useState<Track[]>([]);
+    const [playing, setPlaying]   = useState(false);
+    const [time, setTime]         = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [shuffle, setShuffle]   = useState(false);
+    const [repeat, setRepeat]     = useState(false);
+    const [openSignal, setOpenSignal] = useState(0);
+    const [volume, setVolumeState] = useState(() => {
+        const v = Number(window.localStorage.getItem('sd-phone:music:vol'));
+        return isFinite(v) && v > 0 ? Math.min(1, v) : 1;
+    });
+
+    useEffect(() => {
+        let cancelled = false;
+        loadYouTubeApi().then(() => {
+            if (cancelled || !ytHostRef.current || ytRef.current) return;
+            ytRef.current = new window.YT.Player(ytHostRef.current, {
+                height: '1', width: '1',
+                playerVars: { controls: 0, disablekb: 1, playsinline: 1 },
+                events: {
+                    onReady: () => { ytReady.current = true; ytRef.current?.setVolume?.(Math.round(volume * 100)); },
+                    onStateChange: (e: any) => {
+                        if (e.data === 0) handlers.current.ended();
+                        else if (e.data === 1) setPlaying(true);
+                        // Only honour a pause the user actually asked for — ignore the
+                        // spurious "paused" the player emits mid-track-switch.
+                        else if (e.data === 2 && !wantPlay.current) setPlaying(false);
+                    },
+                },
+            });
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (!isYt(current)) return;
+        const id = window.setInterval(() => {
+            const p = ytRef.current;
+            if (p && ytReady.current && p.getCurrentTime) {
+                setTime(p.getCurrentTime() || 0);
+                setDuration(p.getDuration() || 0);
+            }
+        }, 300);
+        return () => window.clearInterval(id);
+         
+    }, [current]);
+
+    useEffect(() => {
+        const a = audioRef.current;
+        if (!current) { a?.pause(); try { ytRef.current?.stopVideo?.(); } catch { /* */ } return; }
+        const vid = youtubeId(current.url);
+        if (vid) {
+            a?.pause();
+            const start = () => {
+                ytRef.current?.loadVideoById?.(vid);
+                if (!playing) window.setTimeout(() => ytRef.current?.pauseVideo?.(), 250);
+            };
+            if (ytReady.current) start();
+            else loadYouTubeApi().then(() => window.setTimeout(start, 200));
+        } else {
+            try { ytRef.current?.stopVideo?.(); } catch { /* */ }
+            if (a) {
+                if (a.src !== current.url) { a.src = current.url; a.load(); }
+                a.volume = volume;
+                if (playing) a.play().catch(() => setPlaying(false));
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [current]);
+
+    useEffect(() => {
+        if (!current) return;
+        if (isYt(current)) {
+            const p = ytRef.current;
+            if (p && ytReady.current) { if (playing) p.playVideo?.(); else p.pauseVideo?.(); }
+        } else {
+            const a = audioRef.current;
+            if (a) { if (playing) a.play().catch(() => setPlaying(false)); else a.pause(); }
+        }
+         
+    }, [playing, current]);
+
+    useEffect(() => {
+        if (audioRef.current) audioRef.current.volume = volume;
+        if (ytRef.current && ytReady.current) ytRef.current.setVolume?.(Math.round(volume * 100));
+        try { window.localStorage.setItem('sd-phone:music:vol', String(volume)); } catch { /* */ }
+    }, [volume]);
+
+    useEffect(() => { timeRef.current = time; }, [time]);
+
+    const play = useCallback((track: Track, q?: Track[]) => {
+        wantPlay.current = true;
+        setQueue(q && q.length ? q : [track]);
+        setCurrent(track);
+        setPlaying(true);
+    }, []);
+    const toggle = useCallback(() => {
+        if (current) setPlaying(p => { wantPlay.current = !p; return !p; });
+    }, [current]);
+    const stop = useCallback(() => {
+        wantPlay.current = false;
+        setPlaying(false);
+        setCurrent(null);
+        setQueue([]);
+        setTime(0);
+        setDuration(0);
+    }, []);
+    const seek = useCallback((t: number) => {
+        if (isYt(current)) ytRef.current?.seekTo?.(t, true);
+        else if (audioRef.current) audioRef.current.currentTime = t;
+        setTime(t);
+    }, [current]);
+    const step = useCallback((dir: 1 | -1) => {
+        if (dir === -1 && timeRef.current > 3) { seek(0); return; }
+        setCurrent(cur => {
+            if (!cur) return cur;
+            const list = queue.length ? queue : [cur];
+            const idx = list.findIndex(t => t.id === cur.id);
+            if (idx < 0) return cur;
+            let n: number;
+            if (shuffle && list.length > 1) { do { n = Math.floor(Math.random() * list.length); } while (n === idx); }
+            else n = (idx + dir + list.length) % list.length;
+            wantPlay.current = true;
+            setPlaying(true);
+            return list[n];
+        });
+    }, [queue, shuffle, seek]);
+    const next = useCallback(() => step(1), [step]);
+    const prev = useCallback(() => step(-1), [step]);
+    const setVolume = useCallback((v: number) => setVolumeState(Math.max(0, Math.min(1, v))), []);
+    const requestOpen = useCallback(() => setOpenSignal(n => n + 1), []);
+
+    handlers.current.ended = () => {
+        if (repeat) { wantPlay.current = true; seek(0); setPlaying(true); }
+        else next();
+    };
+
+    const value = useMemo<MusicCtx>(() => ({
+        current, playing, volume, shuffle, repeat,
+        play, stop, toggle, next, prev, seek, setVolume, setShuffle, setRepeat,
+        requestOpen, openSignal,
+    }), [
+        current, playing, volume, shuffle, repeat,
+        play, stop, toggle, next, prev, seek, setVolume, setShuffle, setRepeat,
+        requestOpen, openSignal,
+    ]);
+
+    const progress = useMemo<MusicProgress>(() => ({ time, duration }), [time, duration]);
+
+    return (
+        <Ctx.Provider value={value}>
+            <ProgressCtx.Provider value={progress}>
+                <audio
+                    ref={audioRef}
+                    onTimeUpdate={e => setTime(e.currentTarget.currentTime)}
+                    onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+                    onEnded={() => handlers.current.ended()}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => { if (!wantPlay.current) setPlaying(false); }}
+                />
+                <div style={{ position: 'fixed', width: 1, height: 1, left: -9999, top: -9999, opacity: 0, pointerEvents: 'none' }}>
+                    <div ref={ytHostRef} />
+                </div>
+                {children}
+            </ProgressCtx.Provider>
+        </Ctx.Provider>
+    );
+}
