@@ -1243,7 +1243,8 @@ export type IconId = string;
 
 export function AppIconSVG({ icon, size }: { icon: IconId; size?: number }) {
     if (icon.startsWith('custom:')) return <CustomAppTile appId={icon.slice(7)} size={size} />;
-    const Component = ICON_MAP[icon] ?? FallbackIcon;
+    const Component = ICON_MAP[icon];
+    if (!Component) return <CustomAppTile appId={icon} size={size} />;
     if (size == null) return <Component />;
     return (
         <div style={{ position: 'relative', width: size, height: size, overflow: 'hidden' }}>
@@ -1295,11 +1296,3 @@ function CustomAppTile({ appId, size }: { appId: string; size?: number }) {
     );
 }
 
-function FallbackIcon() {
-    return (
-        <svg viewBox={`0 0 ${S} ${S}`} width={S} height={S}>
-            <defs><LinearGrad id="fb" top="#4A4A4C" bot="#2A2A2C" /></defs>
-            <rect width={S} height={S} fill="url(#fb)" />
-        </svg>
-    );
-}
