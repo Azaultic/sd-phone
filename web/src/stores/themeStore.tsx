@@ -123,6 +123,9 @@ interface ThemeState {
     removeCustomTone: (kind: ToneKind, id: string) => void;
     statusLightOverride:    boolean | null;
     setStatusLightOverride: (v: boolean | null) => void;
+    statusBarAutoLight: boolean | null;
+    homeAutoLight:      boolean | null;
+    setAutoContrast:    (top: boolean | null, bottom: boolean | null) => void;
     hideHomeIndicator:    boolean;
     setHideHomeIndicator: (v: boolean) => void;
     lockClock:    LockClock;
@@ -160,6 +163,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     customRingtones: [],
     customNotificationTones: [],
     statusLightOverride: null,
+    statusBarAutoLight: null,
+    homeAutoLight: null,
     hideHomeIndicator: false,
     lockClock: isFiveM ? DEFAULT_LOCK_CLOCK : loadLockClockLocal(),
     passcode: initialSecurity.passcode,
@@ -256,6 +261,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     },
 
     setStatusLightOverride: (v) => set({ statusLightOverride: v }),
+    setAutoContrast:        (top, bottom) => set({ statusBarAutoLight: top, homeAutoLight: bottom }),
     setHideHomeIndicator:   (v) => set({ hideHomeIndicator: v }),
 
     setLockClock: (cfg) => {

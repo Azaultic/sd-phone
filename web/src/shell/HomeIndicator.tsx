@@ -7,9 +7,9 @@ interface Props {
 }
 
 export function HomeIndicator({ onGoHome, closing = false }: Props) {
-    const { theme, statusLightOverride } = useTheme('theme', 'statusLightOverride');
+    const { theme, statusLightOverride, homeAutoLight } = useTheme('theme', 'statusLightOverride', 'homeAutoLight');
     const interactive = Boolean(onGoHome) && !closing;
-    const lightPill = theme === 'dark' ? true : (statusLightOverride ?? false);
+    const lightPill = theme === 'dark' ? true : (statusLightOverride ?? homeAutoLight ?? false);
     const pillColor = lightPill
         ? 'bg-white/75 group-hover:bg-white/90'
         : 'bg-black/70 group-hover:bg-black/85';

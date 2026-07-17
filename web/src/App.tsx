@@ -17,6 +17,7 @@ import { HomeIndicator } from '@/shell/HomeIndicator';
 import { Lockscreen }  from '@/shell/Lockscreen';
 import { PhoneShell }  from '@/shell/PhoneShell';
 import { StatusBar }   from '@/shell/StatusBar';
+import { useAutoContrast } from '@/shell/useAutoContrast';
 import { VolumeHUD }   from '@/shell/VolumeHUD';
 import { SetupFlow }   from '@/shell/SetupFlow';
 import type { SetupResult } from '@/shell/SetupFlow';
@@ -113,7 +114,7 @@ function AppContent() {
     // Tone/volume fields are deliberately NOT subscribed here — they're only
     // read inside event callbacks (via useThemeStore.getState()), so slider
     // drags in Control Center don't re-render the whole tree from the root.
-    const { theme, darkTheme, wallpaper, setTheme, setWallpaper, statusLightOverride, hideHomeIndicator, airplaneMode, hour24, setHour24, setSecurity } = useTheme('theme', 'darkTheme', 'wallpaper', 'setTheme', 'setWallpaper', 'statusLightOverride', 'hideHomeIndicator', 'airplaneMode', 'hour24', 'setHour24', 'setSecurity');
+    const { theme, darkTheme, wallpaper, setTheme, setWallpaper, statusLightOverride, statusBarAutoLight, hideHomeIndicator, airplaneMode, hour24, setHour24, setSecurity } = useTheme('theme', 'darkTheme', 'wallpaper', 'setTheme', 'setWallpaper', 'statusLightOverride', 'statusBarAutoLight', 'hideHomeIndicator', 'airplaneMode', 'hour24', 'setHour24', 'setSecurity');
     const locale = useLocaleStore(s => s.locale);
     useEffect(() => { useLocaleStore.getState().hydrate(); }, []);
 
@@ -587,6 +588,10 @@ function AppContent() {
     useEffect(() => { hydrateAlarms(); }, []);
     const phoneOpen = !!view;
     useEffect(() => { if (phoneOpen) hydrateAlarms(true); }, [phoneOpen]);
+    useAutoContrast(
+        phoneOpen && !locked && setup.completed && currentApp !== 'camera' && theme !== 'dark',
+        `${currentApp ?? ''}|${theme}|${locked}`,
+    );
 
     const fireAlarm = useCallback((a: AlarmDef) => {
         if (ringingAlarmRef.current) return;
@@ -956,7 +961,7 @@ function AppContent() {
                         showWifi={airplaneMode ? false : (view.showWifi && ccWifi)}
                         battery={battery}
                         airplane={airplaneMode}
-                        light={showSetup ? false : ((theme === 'dark' ? null : statusLightOverride) ?? (cameraMode ? true : statusLight))}
+                        light={showSetup ? false : ((theme === 'dark' ? null : statusLightOverride) ?? (cameraMode ? true : (statusBarAutoLight ?? statusLight)))}
                         controlHint={!showSetup && !cameraMode && !ccOpen && !homeEditing}
                         editing={homeEditing && onHomescreen}
                     />
