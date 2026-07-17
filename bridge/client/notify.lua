@@ -9,7 +9,7 @@ local USE_LATION_UI = false
 
 ---@type table Notify module; the table returned at end of file. Client-side notification bridge:
 ---one show() over whichever toast backend the server runs (ox_lib, lation_ui, or the framework's
----native notify), plus the listener for the 'sd-phone:client:notify' net event that
+---native notify), plus the listener for the 'sd-phone:client:toast' net event that
 ---bridge/server/notify.lua fires.
 local notify = {}
 
@@ -66,10 +66,10 @@ function notify.show(data, notifyType)
     end
 end
 
----Server -> client notify trigger, fired by bridge.server.notify.to(src, ...). Shows string or
----table payloads; drops anything else.
+---Server -> client toast trigger, fired by bridge.server.notify.to(src, ...). Shows string or
+---table payloads; drops anything else. Distinct from 'sd-phone:client:notify' (the phone banner).
 ---@param data string|table Notification payload (passed straight through to `notify.show`).
-RegisterNetEvent('sd-phone:client:notify', function(data)
+RegisterNetEvent('sd-phone:client:toast', function(data)
     if type(data) ~= 'string' and type(data) ~= 'table' then return end
     notify.show(data)
 end)
