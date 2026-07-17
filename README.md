@@ -19,7 +19,7 @@
 </div>
 
 ---
-Thanks for trying this so early. I'd put the phone at about 85% done as of writing, so expect rough edges and a few gaps. Some apps are still mock-only or not fully wired up yet (Vibez, for example, has no backend at this point), and there's a good amount of polish and fixes left across the board
+Thanks for trying this so early. I'd put the phone at about 85% done as of writing, so expect rough edges and a few gaps. Some apps are still mock-only or not fully wired up yet (Vibez, for example, has no backend at this point and only a mock frontend), and there's a good amount of polish and fixes left across the board
 
 Any issues or PRs are highly appreciated.
 
