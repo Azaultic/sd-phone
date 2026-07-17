@@ -4,7 +4,7 @@
 
 **An iOS-themed smartphone for FiveM. 45+ server-backed apps, real app accounts, a live game-view camera, online multiplayer games, and drop-in lb-phone compatibility.**
 
-**The phone is NOT ready yet for use on a live server, this is for people to play around with it, report bugs and make PRs to speed up it's development, I'm hoping to have it done by the end of July.
+The phone is **NOT ready yet for use on a live server**, this is for people to play around with it, report bugs and make PRs to speed up it's development, I'm hoping to have it done by the end of July.
 
 [![Release](https://img.shields.io/github/v/release/Samuels-Development/sd-phone?label=Release&logo=github)](https://github.com/Samuels-Development/sd-phone)
 [![Downloads](https://img.shields.io/github/downloads/Samuels-Development/sd-phone/total?label=Downloads&logo=github&color=94DD0C)](https://github.com/Samuels-Development/sd-phone)
