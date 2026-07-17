@@ -50,7 +50,7 @@ Everything player-facing is translatable, apps resume where you left them, and t
 
 <div align="center">
 
-<a href="https://refer.fivemanage.com/samuel"><img src="https://avatars.githubusercontent.com/u/132940930?s=260&v=4" alt="Fivemanage" width="260" /></a>
+<a href="https://refer.fivemanage.com/samuel"><img src="https://docs.samueldev.shop/fivemanage-banner.png" alt="Fivemanage" width="500" /></a>
 
 ### sd-phone is partnered with Fivemanage for media hosting
 
