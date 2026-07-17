@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useTheme } from '@/stores/themeStore';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { WordleIcon } from '@/shell/AppIconSVG';
 import { SoloGame } from './SoloGame';
@@ -84,8 +83,6 @@ export function Wordle({ onClose: _onClose }: Props) {
     const onlineRef = useRef(onlineGame);
     onlineRef.current = onlineGame;
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
 
     function startSolo() { setSoloSeed(s => s + 1); setScreen('solo'); }
 

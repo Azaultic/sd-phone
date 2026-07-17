@@ -5,7 +5,7 @@ import { t } from '@/i18n';
 import { formatDuration } from '@/lib/time';
 import { fetchNui, isFiveM } from '@/core/nui';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { POSTS, type User } from '../data';
 import { apiLiveStart, apiLiveEnd, apiLiveFrame, apiLiveChunk, apiLiveHeart, type LiveComment, type LiveEncoderConfig } from '../photogramApi';
@@ -98,11 +98,7 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
     const liveIdRef = useRef<string | null>(null);
     const renderRef = useRef<GameRender | null>(null);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        setStatusLightOverride(true);
-        return () => setStatusLightOverride(null);
-    }, [setStatusLightOverride]);
+    useStatusBarLight(true);
 
     function grabFrame(): string | null {
         const src = canvasRef.current;

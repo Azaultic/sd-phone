@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarDays, Feather, Heart, Image as ImageIcon, MessageCir
 
 import { t } from '@/i18n';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { EmptyState } from '@/ui/EmptyState';
 import { apiProfilePosts } from '../birdyApi';
 import { BG, BLUE, META, type BirdyAuthor, type BirdyProfile } from '../data';
@@ -49,11 +49,9 @@ export function Profile({ profile, me, handle, onBack, onEdit, onOpenPost, onTog
 
     useEffect(() => { setFollowing(!!profile?.isFollowing); }, [profile?.isFollowing]);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
     const [overBanner, setOverBanner] = useState(true);
     const [followView, setFollowView] = useState<'followers' | 'following' | null>(null);
-    useEffect(() => () => setStatusLightOverride(null), [setStatusLightOverride]);
-    useEffect(() => { setStatusLightOverride(followView ? false : overBanner); }, [followView, overBanner, setStatusLightOverride]);
+    useStatusBarLight(followView ? false : overBanner);
 
     function toggleFollow() {
         if (!handle) return;

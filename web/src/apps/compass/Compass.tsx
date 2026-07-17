@@ -53,13 +53,8 @@ export function Compass({ onClose: _onClose }: { onClose: () => void }) {
     const [geo, setGeo] = useState<Geo | null>(null);
     const dragging = useRef(false);
 
-    const { theme, setStatusLightOverride } = useTheme('theme', 'setStatusLightOverride');
+    const { theme } = useTheme('theme');
     const dark = theme === 'dark';
-
-    useEffect(() => {
-        setStatusLightOverride(dark);
-        return () => setStatusLightOverride(null);
-    }, [dark, setStatusLightOverride]);
 
     useEffect(() => {
         if (!isFiveM) {

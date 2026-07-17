@@ -589,7 +589,7 @@ function AppContent() {
     const phoneOpen = !!view;
     useEffect(() => { if (phoneOpen) hydrateAlarms(true); }, [phoneOpen]);
     useAutoContrast(
-        phoneOpen && !locked && setup.completed && currentApp !== 'camera' && theme !== 'dark',
+        phoneOpen && !locked && setup.completed && currentApp !== 'camera',
         `${currentApp ?? ''}|${theme}|${locked}`,
     );
 
@@ -961,7 +961,7 @@ function AppContent() {
                         showWifi={airplaneMode ? false : (view.showWifi && ccWifi)}
                         battery={battery}
                         airplane={airplaneMode}
-                        light={showSetup ? false : ((theme === 'dark' ? null : statusLightOverride) ?? (cameraMode ? true : (statusBarAutoLight ?? statusLight)))}
+                        light={showSetup ? false : (cameraMode ? true : (statusLightOverride ?? statusBarAutoLight ?? statusLight))}
                         controlHint={!showSetup && !cameraMode && !ccOpen && !homeEditing}
                         editing={homeEditing && onHomescreen}
                     />

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useTheme } from '@/stores/themeStore';
 import { fetchNui, isFiveM } from '@/core/nui';
 import { apiCall, apiData } from '@/core/api';
 import { t } from '@/i18n';
@@ -19,11 +18,6 @@ import { NicknameSheet } from './NicknameSheet';
 type SheetKind = 'create' | 'join' | 'nickname' | null;
 
 export function DarkChat({ onClose: _onClose }: { onClose: () => void }) {
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        setStatusLightOverride(true);
-        return () => setStatusLightOverride(null);
-    }, [setStatusLightOverride]);
 
     useEffect(() => {
         if (!isFiveM) return;

@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, Coins, Cpu, Layers, Minus, Plus, Trophy, Wal
 
 import { t } from '@/i18n';
 
-import { useTheme } from '@/stores/themeStore';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { BlackjackIcon } from '@/shell/AppIconSVG';
 import {
@@ -61,8 +60,6 @@ export function Blackjack({ onClose: _onClose }: Props) {
     const [leaderboard, setLeaderboard] = useState<GameLeaderboard | null>(null);
     const [lbLoading, setLbLoading] = useState(false);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
     useEffect(() => { void loadStats(GAME).then(setStats); syncChips(); }, [syncChips]);
 
     const [phase,   setPhase]   = useState<Phase>('betting');

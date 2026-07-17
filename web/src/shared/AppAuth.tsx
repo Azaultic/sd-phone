@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AtSign, ChevronLeft, Eye, EyeOff, KeyRound, Phone, ShieldCheck, X } from 'lucide-react';
 
 import { t } from '@/i18n';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { useIosPush } from '@/hooks/useIosPush';
 import { clearSessionState, useSessionState } from '@/hooks/useSessionState';
 import { AlertDialog } from '@/ui/AlertDialog';
@@ -47,7 +47,6 @@ export interface AppAuthProps {
 type Screen = 'welcome' | 'create' | 'login' | 'reset' | 'resetCode' | 'success';
 
 export function AppAuth({ appName, tagline, icon, theme, fields, onAuthed, onDismiss, onSubmit, onRequestReset, onConfirmReset, onSuggestCode, onSaveCredentials, savedLogin, myNumber, myEmail }: AppAuthProps) {
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
     const [screen, setScreen] = useSessionState<Screen>(`auth:${appName}:screen`, 'welcome');
     const [resetIdentity, setResetIdentity] = useSessionState<string>(`auth:${appName}:resetIdentity`, '');
     const [notice, setNotice] = useState<string | null>(null);
@@ -97,11 +96,8 @@ export function AppAuth({ appName, tagline, icon, theme, fields, onAuthed, onDis
         beginSuccess('login', values);
     }
 
-    useEffect(() => {
-        const light = screen === 'welcome' ? theme.welcomeText === 'light' : false;
-        setStatusLightOverride(light);
-        return () => setStatusLightOverride(null);
-    }, [screen, theme.welcomeText, setStatusLightOverride]);
+    const welcomeLight = screen === 'welcome' ? theme.welcomeText === 'light' : false;
+    useStatusBarLight(welcomeLight);
 
     const showingDetail = screen !== 'welcome';
     const showingReset  = screen === 'reset' || screen === 'resetCode';
@@ -766,7 +762,6 @@ export function ChangePasswordForm({ appName, icon, theme, identity, savedPasswo
     onBack:    () => void;
 }) {
     const { goBack, pageStyle } = useIosPush(onBack);
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
     const [current, setCurrent] = useState('');
     const [next,    setNext]    = useState('');
     const [confirm, setConfirm] = useState('');
@@ -777,10 +772,7 @@ export function ChangePasswordForm({ appName, icon, theme, identity, savedPasswo
     const [confirmOpen, setConfirmOpen] = useState(false);
     const formBg = theme.formBg ?? '#f2f3f5';
 
-    useEffect(() => {
-        setStatusLightOverride(false);
-        return () => setStatusLightOverride(null);
-    }, [setStatusLightOverride]);
+    useStatusBarLight(false);
 
     const focusingNewPw = focused === 'new' || focused === 'confirm';
     useEffect(() => {

@@ -9,7 +9,6 @@ import { ScoreStartScreen } from '@/apps/_games/ScoreStartScreen';
 import { Leaderboard } from '@/apps/_games/Leaderboard';
 import { loadScoreboard, loadStats, submitScoreApi, type ScoreEntry } from '@/apps/_games/statsApi';
 import { FlappyIcon } from '@/shell/AppIconSVG';
-import { useTheme } from '@/stores/themeStore';
 import {
     BIRD_SIZE, BIRD_X, FIELD_H, FIELD_W, FLAP_V, GRAVITY, GROUND_H,
     MAX_FALL, PIPE_GAP, PIPE_SPACING, PIPE_SPEED, PIPE_W,
@@ -63,8 +62,6 @@ export function Flappy({ onClose: _onClose }: Props) {
 
     // Dark menu/leaderboard get the light (dark-mode) status bar; the bright-sky game screen keeps
     // the normal dark status bar so the time/battery stay readable.
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(screen !== 'game'); return () => setStatusLightOverride(null); }, [screen, setStatusLightOverride]);
 
     function reset() {
         yRef.current = skyH() / 2 - BIRD_SIZE / 2;

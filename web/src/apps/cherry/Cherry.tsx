@@ -4,7 +4,7 @@ import { Cherry as CherryGlyph, MessageCircle, User } from 'lucide-react';
 import { isFiveM } from '@/core/nui';
 import { t } from '@/i18n';
 import { readJson, writeJson } from '@/lib/storage';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { useSessionState } from '@/hooks/useSessionState';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
 import { useAppAuth } from '@/hooks/useAppAuth';
@@ -31,12 +31,7 @@ export function Cherry({ onClose: _onClose }: { onClose: () => void }) {
     const { authed, setAuthed, authChecked, justAuthed, setJustAuthed, myNumber, myEmail, savedLogin } = useAppAuth('cherry',
         () => accountsMe('cherry').then(s => s.loggedIn));
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        if (!authed) return;
-        setStatusLightOverride(false);
-        return () => setStatusLightOverride(null);
-    }, [authed, setStatusLightOverride]);
+    useStatusBarLight(authed ? false : null);
 
     const [view, setView] = useSessionState<View>('cherry:view', 'deck');
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useTheme } from '@/stores/themeStore';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { Board } from './Board';
 import { CapturedStrip, MoveList } from './GameInfo';
@@ -78,8 +77,6 @@ export function Chess({ onClose: _onClose }: Props) {
 
     useEffect(() => { void loadStats(GAME).then(setStats); }, []);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
 
     const game     = useMemo(() => moves.reduce((s, m) => makeMove(s, m), initialState()), [moves]);
     const lastMove = moves.length ? { from: moves[moves.length - 1].from, to: moves[moves.length - 1].to } : null;

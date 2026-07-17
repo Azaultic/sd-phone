@@ -5,7 +5,7 @@ import { t } from '@/i18n';
 import { formatDuration } from '@/lib/time';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
 import { useDeckActive } from '@/shell/deckActive';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { apiLiveJoin, apiLiveLeave, apiLiveComment, apiLiveHeart, type LiveComment } from '../photogramApi';
 import { LiveVideoPlayer, base64ToBytes, liveVideoPlaybackSupported } from './liveMedia';
 import { type User } from '../data';
@@ -43,11 +43,7 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
         void v.play().catch(() => {});
     }, [deckActive, hasVideo]);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        setStatusLightOverride(true);
-        return () => setStatusLightOverride(null);
-    }, [setStatusLightOverride]);
+    useStatusBarLight(true);
 
     useEffect(() => {
         let alive = true;

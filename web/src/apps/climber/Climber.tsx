@@ -9,7 +9,6 @@ import { ScoreStartScreen } from '@/apps/_games/ScoreStartScreen';
 import { Leaderboard } from '@/apps/_games/Leaderboard';
 import { loadScoreboard, loadStats, submitScoreApi, type ScoreEntry } from '@/apps/_games/statsApi';
 import { ClimberIcon } from '@/shell/AppIconSVG';
-import { useTheme } from '@/stores/themeStore';
 
 import {
     BOUNCE_V, CHAR_H, CHAR_W, FIELD_H, FIELD_W, GRAVITY, MAX_FALL, MOVE_SPEED, MOVING_SPEED,
@@ -82,8 +81,6 @@ export function Climber({ onClose: _onClose }: Props) {
 
     // Dark menu/leaderboard get the light (dark-mode) status bar; the bright-sky game screen keeps
     // the normal dark status bar so the time/battery stay readable.
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(screen !== 'game'); return () => setStatusLightOverride(null); }, [screen, setStatusLightOverride]);
 
     function commitTop(list: Platform[]) {
         let min = Infinity;

@@ -4,7 +4,7 @@ import { Sunrise, Sunset } from 'lucide-react';
 import { t } from '@/i18n';
 import { fetchNui } from '@/core/nui';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import type { WeatherPayload } from '@/core/types';
 import {
     backgroundFor, buildForecast, formatHour, formatTimeOfDay, isDaytime,
@@ -42,8 +42,7 @@ export function Weather({ onClose }: { onClose: () => void }) {
     useNuiEvent('sd-phone:weather', applyWeather);
     useEffect(() => { void fetchNui<WeatherPayload>('sd-phone:weather:get').then(applyWeather); }, [applyWeather]);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
+    useStatusBarLight(true);
 
     const city = useMemo(
         () => buildForecast(PROFILES.find(p => p.id === 'los_santos')!, live ?? undefined),

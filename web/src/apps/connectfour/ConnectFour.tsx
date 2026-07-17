@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { t } from '@/i18n';
-import { useTheme } from '@/stores/themeStore';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { ConnectFourIcon } from '@/shell/AppIconSVG';
 import { Board, discColor } from './Board';
@@ -80,8 +79,6 @@ export function ConnectFour({ onClose: _onClose }: Props) {
 
     useEffect(() => { void loadStats(GAME).then(setStats); }, []);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
 
     const view = useMemo(() => replay(moves), [moves]);
     const { board, turn, lastDrop, status: gameStatus, winner, winLine } = view;

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { ReactNode } from 'react';
 
 import { t } from '@/i18n';
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { clearSessionState, useSessionState } from '@/hooks/useSessionState';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
 import { useAppAuth } from '@/hooks/useAppAuth';
@@ -39,12 +39,7 @@ export function Photogram({ onClose: _onClose }: { onClose: () => void }) {
     const { authed, setAuthed, authChecked, justAuthed, setJustAuthed, myNumber, myEmail, savedLogin } = useAppAuth('photogram',
         () => accountsMe('photogram').then(s => s.loggedIn));
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        if (!authed) return;
-        setStatusLightOverride(false);
-        return () => setStatusLightOverride(null);
-    }, [authed, setStatusLightOverride]);
+    useStatusBarLight(authed ? false : null);
 
     const [tab,        setTab]        = useSessionState<GTab>('photogram:tab', 'home');
     const [createOpen, setCreateOpen] = useSessionState('photogram:createOpen', false);

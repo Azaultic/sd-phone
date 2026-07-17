@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import { Home, Inbox as InboxIcon, Plus, Search, User } from 'lucide-react';
 
-import { useTheme } from '@/stores/themeStore';
+import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { useSessionState } from '@/hooks/useSessionState';
 import { readJson, writeJson } from '@/lib/storage';
 import { useAppAuth } from '@/hooks/useAppAuth';
@@ -35,12 +34,7 @@ export function Vibez({ onClose: _onClose }: { onClose: () => void }) {
     const { authed, setAuthed, authChecked, justAuthed, setJustAuthed, myNumber, myEmail, savedLogin } = useAppAuth('vibez',
         () => accountsMe('vibez').then(s => s.loggedIn));
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => {
-        if (!authed) return;
-        setStatusLightOverride(true);
-        return () => setStatusLightOverride(null);
-    }, [authed, setStatusLightOverride]);
+    useStatusBarLight(authed ? true : null);
 
     const [tab,    setTab]    = useSessionState<Tab>('vibez:tab', 'home');
     const [upload, setUpload] = useSessionState('vibez:upload', false);

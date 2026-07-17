@@ -9,7 +9,6 @@ import { GameOverCard } from '@/apps/_arcade/GameOverCard';
 import { loadScoreboard, loadStats, submitScoreApi, type ScoreEntry } from '@/apps/_games/statsApi';
 import { BlocksIcon } from '@/shell/AppIconSVG';
 import { useDeckActive } from '@/shell/deckActive';
-import { useTheme } from '@/stores/themeStore';
 
 import {
     Bag, COLS, ROWS, SHAPES,
@@ -78,8 +77,6 @@ export function Blocks({ onClose: _onClose }: Props) {
     }, []);
 
     // Blocks is dark on every screen — force the status bar to its light (dark-mode) content.
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
 
     const lockPiece = useCallback((p: Piece) => {
         const { board: merged, cleared } = lockAndClear(boardRef.current, p);

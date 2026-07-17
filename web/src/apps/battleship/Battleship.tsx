@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Shuffle } from 'lucide-react';
 
-import { useTheme } from '@/stores/themeStore';
 import { AlertDialog } from '@/ui/AlertDialog';
 import { BattleshipIcon } from '@/shell/AppIconSVG';
 import { t } from '@/i18n';
@@ -83,8 +82,6 @@ export function Battleship({ onClose: _onClose }: Props) {
 
     useEffect(() => { void loadStats(GAME).then(setStats); }, []);
 
-    const { setStatusLightOverride } = useTheme('setStatusLightOverride');
-    useEffect(() => { setStatusLightOverride(true); return () => setStatusLightOverride(null); }, [setStatusLightOverride]);
 
     const enemyCellsHit = useMemo(() => Object.values(shotsAtEnemy).filter(v => v === 'hit').length, [shotsAtEnemy]);
     const myCellsHit     = useMemo(() => Object.values(shotsAtMe).filter(v => v === 'hit').length, [shotsAtMe]);

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { bgLuma } from '@/lib/contrast';
 import { ancestorZoom } from '@/lib/zoom';
 import { useThemeStore } from '@/stores/themeStore';
 
@@ -7,26 +8,9 @@ const SAMPLE_MS = 300;
 const DARK_BELOW = 0.5;
 const FRACS = [0.2, 0.8];
 
-interface RGBA { r: number; g: number; b: number; a: number }
-
-function parseRGBA(value: string): RGBA | null {
-    const m = value.match(/rgba?\(([^)]+)\)/);
-    if (!m) return null;
-    const p = m[1].split(',').map(v => parseFloat(v.trim()));
-    if (p.length < 3 || p.some(n => Number.isNaN(n))) return null;
-    return { r: p[0], g: p[1], b: p[2], a: p.length >= 4 ? p[3] : 1 };
-}
-
-function luma({ r, g, b }: RGBA): number {
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
-
 function readBg(el: Element): number | 'image' | null {
     const cs = getComputedStyle(el);
-    const col = parseRGBA(cs.backgroundColor);
-    if (col && col.a >= 0.5) return luma(col);
-    if (cs.backgroundImage && cs.backgroundImage !== 'none') return 'image';
-    return null;
+    return bgLuma(cs.backgroundColor, cs.backgroundImage);
 }
 
 function sampleIframe(iframe: HTMLIFrameElement, fx: number, edge: 'top' | 'bottom'): number | 'image' | null {
@@ -51,6 +35,7 @@ function sampleIframe(iframe: HTMLIFrameElement, fx: number, edge: 'top' | 'bott
 
 function lumaAt(cx: number, cy: number, fx: number, edge: 'top' | 'bottom'): number | null {
     for (const el of document.elementsFromPoint(cx, cy)) {
+        if (!el.closest('[data-phone-screen]') || el.closest('[inert]')) continue;
         if (el instanceof HTMLIFrameElement) {
             const inner = sampleIframe(el, fx, edge);
             return inner == null || inner === 'image' ? null : inner;
