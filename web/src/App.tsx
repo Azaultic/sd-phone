@@ -951,7 +951,7 @@ function AppContent() {
                         showWifi={airplaneMode ? false : (view.showWifi && ccWifi)}
                         battery={battery}
                         airplane={airplaneMode}
-                        light={showSetup ? false : (statusLightOverride ?? (cameraMode ? true : statusLight))}
+                        light={showSetup ? false : ((theme === 'dark' ? null : statusLightOverride) ?? (cameraMode ? true : statusLight))}
                         controlHint={!showSetup && !cameraMode && !ccOpen && !homeEditing}
                         editing={homeEditing && onHomescreen}
                     />
