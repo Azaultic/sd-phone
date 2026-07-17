@@ -30,8 +30,8 @@ export function NotifIcon({ item, size = 38 }: { item: NotificationItem; size?: 
     }
     if (item.app) {
         return (
-            <span className="squircle shrink-0 [&>svg]:block [&>svg]:h-full [&>svg]:w-full" style={style}>
-                <AppIconSVG icon={item.app} />
+            <span className="squircle shrink-0" style={style}>
+                <AppIconSVG icon={item.app} size={size} />
             </span>
         );
     }
