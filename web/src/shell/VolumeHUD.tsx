@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Volume, Volume1, Volume2, VolumeX } from 'lucide-react';
+import { Phone, Volume, Volume1, Volume2, VolumeX } from 'lucide-react';
 
 import { useTheme } from '@/stores/themeStore';
 import { useMusic } from '@/apps/music/MusicContext';
@@ -9,7 +9,7 @@ const CAP_W = 54;
 const CAP_H = 164;
 
 export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
-    const { ringtoneVol, callVol, setRingtoneVol, theme } = useTheme('ringtoneVol', 'callVol', 'setRingtoneVol', 'theme');
+    const { ringtoneVol, callVol, setRingtoneVol, setCallVol, theme } = useTheme('ringtoneVol', 'callVol', 'setRingtoneVol', 'setCallVol', 'theme');
     const music = useMusic();
 
     const mediaMode = !!music.current;
@@ -18,6 +18,7 @@ export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
     const [mounted,   setMounted]   = useState(false);
     const [visible,   setVisible]   = useState(false);
     const [activeVol, setActiveVol] = useState(50);
+    const [source,    setSource]    = useState<'media' | 'ringtone' | 'call'>('ringtone');
 
     const prevRingtone  = useRef<number | null>(null);
     const prevCall      = useRef<number | null>(null);
@@ -45,12 +46,16 @@ export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
         }
 
         let vol: number | null = null;
+        let src: 'media' | 'ringtone' | 'call' = 'ringtone';
         if (mediaMode && prevMedia.current !== null && mediaVol !== prevMedia.current) {
             vol = mediaVol;
+            src = 'media';
         } else if (ringtoneVol !== prevRingtone.current) {
             vol = ringtoneVol;
+            src = 'ringtone';
         } else if (callVol !== prevCall.current) {
             vol = callVol;
+            src = 'call';
         }
         prevRingtone.current = ringtoneVol;
         prevCall.current     = callVol;
@@ -60,6 +65,7 @@ export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
         if (suppressed) return;
 
         setActiveVol(vol);
+        setSource(src);
         setMounted(true);
         requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
 
@@ -71,10 +77,11 @@ export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
     const isDark = theme === 'dark';
 
     const Icon =
-        activeVol === 0 ? VolumeX :
-        activeVol <= 33 ? Volume  :
-        activeVol <= 66 ? Volume1 :
-                          Volume2;
+        source === 'call' ? Phone   :
+        activeVol === 0   ? VolumeX :
+        activeVol <= 33   ? Volume  :
+        activeVol <= 66   ? Volume1 :
+                            Volume2;
 
     function setFromPointer(clientY: number) {
         const el = trackRef.current;
@@ -82,9 +89,11 @@ export function VolumeHUD({ suppressed = false }: { suppressed?: boolean }) {
         const fTop = trackFractionY(el, clientY);
         if (fTop === null) return;
         const level = 1 - fTop;
-        setActiveVol(Math.round(level * 100));
-        if (mediaMode) music.setVolume(level);
-        else setRingtoneVol(Math.round(level * 100));
+        const pct = Math.round(level * 100);
+        setActiveVol(pct);
+        if (source === 'call') setCallVol(pct);
+        else if (mediaMode) music.setVolume(level);
+        else setRingtoneVol(pct);
     }
 
     function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
