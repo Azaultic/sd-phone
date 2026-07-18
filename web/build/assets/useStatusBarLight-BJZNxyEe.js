@@ -1,0 +1,1 @@
+import{cL as s,bZ as u,cW as r}from"./index-BBrq_lTh.js";function i(t){const e=s();u.useEffect(()=>{if(!(!e||t==null))return r.getState().setStatusLightOverride(t),()=>r.getState().setStatusLightOverride(null)},[e,t])}export{i as u};
