@@ -1,1 +1,0 @@
-import{cK as s,bY as u,cU as r}from"./index-CLpApbaH.js";function i(t){const e=s();u.useEffect(()=>{if(!(!e||t==null))return r.getState().setStatusLightOverride(t),()=>r.getState().setStatusLightOverride(null)},[e,t])}export{i as u};
