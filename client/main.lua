@@ -337,7 +337,6 @@ local function OpenPhone()
         data   = {
             locale    = config.Locale,
             locked    = phoneState.locked,
-            reopenApp = config.Phone.ReopenLastApp ~= false,
             battery   = phoneState.battery,
             frameColor = currentFrameColor,
             carrier   = config.StatusBar.Carrier,

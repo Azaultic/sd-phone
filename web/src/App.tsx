@@ -292,9 +292,10 @@ function AppContent() {
         // session's retained apps are still alive - we deliberately do NOT clear them,
         // which is what brings the switcher previews back exactly where you left them.
         // "Close All" is the only thing that wipes them (iOS: apps stay open otherwise).
-        // Config-gated: reopen straight into the app the phone was holstered on. The deck
-        // kept it alive, so this is a resume, not a launch; a SIM switch clears the memo.
-        setCurrentApp(data.reopenApp !== false ? lastOpenAppRef.current : null);
+        // Reopen straight into the app the phone was holstered on when the player's Settings
+        // toggle (Settings > General > Reopen Last App, default off) says so. The deck kept
+        // the app alive, so this is a resume, not a launch; a SIM switch clears the memo.
+        setCurrentApp(useThemeStore.getState().reopenLastApp ? lastOpenAppRef.current : null);
         setIsClosing(false);
         setLaunchOrigin(null);
         setSwitcherOpen(false);
