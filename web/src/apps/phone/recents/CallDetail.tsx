@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ChevronLeft, MessageSquare, Phone, Share, Video } from 'lucide-react';
 
-import { PlaceholderAvatar } from '@/shared/ContactAvatar';
+import { ContactAvatar, PlaceholderAvatar } from '@/shared/ContactAvatar';
 import { formatPhone, type CallEntry } from '../data';
 import { t } from '@/i18n';
 
@@ -17,7 +17,9 @@ export function CallDetail({ entry, onBack, onAddToContacts }: {
         return () => cancelAnimationFrame(id);
     }, []);
 
-    const title = entry.noCallerId ? t('phone.noCallerId','No Caller ID') : formatPhone(entry.number);
+    const title = entry.contact ? entry.contact.name
+        : entry.noCallerId ? t('phone.noCallerId','No Caller ID')
+        : formatPhone(entry.number);
 
     return (
         <div
@@ -37,7 +39,7 @@ export function CallDetail({ entry, onBack, onAddToContacts }: {
 
             <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-6">
                 <div className="flex flex-col items-center pb-5 pt-1">
-                    <PlaceholderAvatar size={134} />
+                    {entry.contact ? <ContactAvatar contact={entry.contact} size={134} /> : <PlaceholderAvatar size={134} />}
                     <div className="mt-3 text-center text-[30px] font-semibold text-black dark:text-white">{title}</div>
                 </div>
 
@@ -63,13 +65,15 @@ export function CallDetail({ entry, onBack, onAddToContacts }: {
                             <div className="text-[13px] text-black/50 dark:text-white/50">{t('phone.phoneLabel','phone')}</div>
                             <div className="text-[19px] text-ios-blue">{formatPhone(entry.number)}</div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onAddToContacts}
-                            className="w-full rounded-[10px] bg-[#e5e5e5] px-4 py-3.5 text-left text-[19px] text-ios-blue active:bg-black/5 dark:bg-surface dark:active:bg-white/5"
-                        >
-                            {t('phone.addToContacts','Add to Contacts')}
-                        </button>
+                        {!entry.contact && (
+                            <button
+                                type="button"
+                                onClick={onAddToContacts}
+                                className="w-full rounded-[10px] bg-[#e5e5e5] px-4 py-3.5 text-left text-[19px] text-ios-blue active:bg-black/5 dark:bg-surface dark:active:bg-white/5"
+                            >
+                                {t('phone.addToContacts','Add to Contacts')}
+                            </button>
+                        )}
                     </>
                 )}
             </div>
