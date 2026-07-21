@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReceiptText } from 'lucide-react';
+
+import { useDeckActive } from '@/shell/deckActive';
 
 import { ContactAvatar, PlaceholderAvatar } from '@/shared/ContactAvatar';
 import { useContacts } from '@/stores/contactsStore';
@@ -34,6 +36,15 @@ export function InvoicesTab({ received, receivedLoading, onRefetchReceived, onPa
 
     const { data: sent, loading: sentLoading, refetch: refetchSent } = useAsyncData(fetchPersonalSent, []);
     useNuiEvent('sd-phone:services:invoices', useCallback(() => { refetchSent(); }, [refetchSent]));
+
+    // Keep-alive: re-sync the sent list when the Wallet is foregrounded (pushes are missed
+    // while the app sits suspended in the switcher).
+    const deckActive = useDeckActive();
+    const wasActive  = useRef(deckActive);
+    useEffect(() => {
+        if (deckActive && !wasActive.current) refetchSent();
+        wasActive.current = deckActive;
+    }, [deckActive, refetchSent]);
 
     // Live contact resolution for the sent rows: a saved card shows its avatar/initials, an
     // unsaved number falls back to the silhouette the received list uses.

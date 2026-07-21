@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, House, ReceiptText } from 'lucide-react';
+
+import { useDeckActive } from '@/shell/deckActive';
 
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
@@ -39,6 +41,15 @@ export function Banking({ onClose: _onClose }: { onClose: () => void }) {
     useNuiEvent('sd-phone:bank:received', useCallback(() => { refresh(); }, [refresh]));
     useNuiEvent('sd-phone:bank:txAdded', useCallback(() => { refresh(); }, [refresh]));
     useNuiEvent('sd-phone:services:invoices', useCallback(() => { refetchReceived(); }, [refetchReceived]));
+
+    // Keep-alive: a backgrounded Wallet misses the pushes above (suspended handlers), so
+    // balance, transactions and received invoices re-sync on the foreground rising edge.
+    const deckActive = useDeckActive();
+    const wasActive  = useRef(deckActive);
+    useEffect(() => {
+        if (deckActive && !wasActive.current) { refresh(); refetchReceived(); }
+        wasActive.current = deckActive;
+    }, [deckActive, refresh, refetchReceived]);
 
     const txs    = overview?.transactions ?? [];
     const latest = useMemo(() => txs.slice(0, 8), [txs]);
