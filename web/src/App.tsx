@@ -101,7 +101,7 @@ interface ViewState {
     showDate:      boolean;
 }
 
-const SERVER_BADGE_APPS = new Set<AppId>(['messages', 'phone', 'mail', 'groups', 'photogram', 'birdy']);
+const SERVER_BADGE_APPS = new Set<AppId>(['messages', 'phone', 'mail', 'groups', 'photogram', 'birdy', 'vibez']);
 
 // How many apps the switcher shows / the recents list remembers. Every visible card
 // wants a live preview, so the retain cap below is bound to this - keeping them the
@@ -286,13 +286,6 @@ function AppContent() {
             setSwitcherClosing(false);
         }
     }, []);
-
-    // The framework loaded a character (first join or a switch): per-player settings become
-    // resolvable only now, so restart both hydration pulls with a fresh retry budget.
-    useNuiEvent('sd-phone:client:characterLoaded', useCallback(() => {
-        useThemeStore.getState().hydrate();
-        useLocaleStore.getState().hydrate();
-    }, []));
 
     useNuiEvent('sd-phone:open', useCallback((data) => {
         if (!data) return;

@@ -7,13 +7,13 @@ import { fetchNui, isFiveM } from '@/core/nui';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
 import { useStatusBarLight } from '@/shell/useStatusBarLight';
 import { AlertDialog } from '@/ui/AlertDialog';
-import { POSTS, type User } from '../data';
-import { apiLiveStart, apiLiveEnd, apiLiveFrame, apiLiveChunk, apiLiveHeart, type LiveComment, type LiveEncoderConfig } from '../photogramApi';
 import { videoStreamingSupported, pickVideoMime, blobToBase64 } from '@/shared/liveMedia';
 import { getGameRender, type GameRender } from '@/render';
-import { VerifiedCheck } from '../ui';
+import { DEV_POSTS, GRAD_FROM, GRAD_TO, HEART, type VUser } from '../data';
+import { apiLiveStart, apiLiveEnd, apiLiveFrame, apiLiveChunk, apiLiveHeart, type LiveEncoderConfig } from '../vibezApi';
+import { LiveCommentRow, type LiveComment } from './LiveComment';
 
-const SIM_VIEWERS: User[] = POSTS.map(p => p.user);
+const SIM_VIEWERS: VUser[] = DEV_POSTS.map(p => p.user);
 const SIM_LINES = ['hello!! 👋', 'first 🔥', 'lets gooo', 'looking clean 🙌', 'w stream', '😂😂', '🔥🔥🔥'];
 
 interface FloatHeart { id: number; drift: number; left: number; }
@@ -85,7 +85,7 @@ function startVideoBroadcast(
     };
 }
 
-export function LiveStream({ onClose }: { onClose: () => void }) {
+export function LiveHost({ onClose }: { onClose: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [feedReady, setFeedReady] = useState(false);
     const [selfie,    setSelfie]    = useState(false);
@@ -159,15 +159,15 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
         return () => window.clearInterval(timer);
     }, []);
 
-    useNuiEvent('sd-phone:photogram:liveComment', (data: { liveId?: string; comment?: LiveComment } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveComment', (data: { liveId?: string; comment?: LiveComment } | undefined) => {
         if (!data?.comment || (liveIdRef.current && data.liveId && data.liveId !== liveIdRef.current)) return;
         setComments(prev => [...prev.slice(-5), data.comment as LiveComment]);
     });
-    useNuiEvent('sd-phone:photogram:liveHeart', (data: { liveId?: string } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveHeart', (data: { liveId?: string } | undefined) => {
         if (liveIdRef.current && data?.liveId && data.liveId !== liveIdRef.current) return;
         spawnHearts(1);
     });
-    useNuiEvent('sd-phone:photogram:liveViewers', (data: { liveId?: string; viewers?: number } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveViewers', (data: { liveId?: string; viewers?: number } | undefined) => {
         if (liveIdRef.current && data?.liveId && data.liveId !== liveIdRef.current) return;
         if (typeof data?.viewers === 'number') setViewers(data.viewers);
     });
@@ -183,7 +183,6 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
         }, 2600);
         const h = window.setInterval(() => spawnHearts(1), 2400);
         return () => { window.clearInterval(v); window.clearInterval(c); window.clearInterval(h); };
-         
     }, []);
 
     useNuiEvent('sd-phone:camera:key', (data) => {
@@ -228,7 +227,12 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
 
             <div className="relative z-20 flex shrink-0 items-start justify-between px-4 pt-[62px]">
                 <div className="flex items-center gap-2">
-                    <span className="rounded-[7px] bg-[#ED4956] px-2 py-[3px] text-[13px] font-bold uppercase tracking-wide">{t('photogram.live', 'Live')}</span>
+                    <span
+                        className="rounded-[7px] px-2 py-[3px] text-[13px] font-bold uppercase tracking-wide"
+                        style={{ background: `linear-gradient(135deg, ${GRAD_FROM}, ${GRAD_TO})` }}
+                    >
+                        {t('vibez.live', 'LIVE')}
+                    </span>
                     <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-[5px] text-[14px] font-semibold tabular-nums backdrop-blur-sm">
                         <Eye className="h-[15px] w-[15px]" strokeWidth={2.4} />
                         {viewers.toLocaleString()}
@@ -240,7 +244,7 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
                 <button
                     type="button"
                     onClick={() => setConfirmEnd(true)}
-                    aria-label={t('photogram.endLiveVideo', 'End live video')}
+                    aria-label={t('vibez.endLive', 'End live')}
                     className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-black/45 backdrop-blur-sm active:scale-90"
                 >
                     <X className="h-[20px] w-[20px]" strokeWidth={2.4} />
@@ -251,17 +255,7 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
 
             <div className="relative z-20 flex shrink-0 items-end justify-between gap-3 px-4 pb-9">
                 <div className="flex min-w-0 flex-1 flex-col justify-end gap-2">
-                    {comments.map(c => (
-                        <div key={c.id} className="flex items-start gap-2" style={{ animation: 'live-comment-in 0.25s ease-out' }}>
-                            <img src={c.user.avatar} alt="" draggable={false} className="mt-[1px] h-[28px] w-[28px] shrink-0 rounded-full object-cover" />
-                            <div className="min-w-0 text-[14px] leading-snug" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
-                                <span className="inline-flex items-center gap-1 font-semibold">
-                                    {c.user.handle}{c.user.verified && <VerifiedCheck size={13} />}
-                                </span>
-                                <span className="ml-1.5 text-white/95">{c.text}</span>
-                            </div>
-                        </div>
-                    ))}
+                    {comments.map(c => <LiveCommentRow key={c.id} comment={c} />)}
                 </div>
 
                 <div className="relative flex shrink-0 flex-col items-center gap-3">
@@ -270,16 +264,16 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
                             <Heart
                                 key={h.id}
                                 onAnimationEnd={() => setHearts(prev => prev.filter(x => x.id !== h.id))}
-                                className="absolute bottom-0 h-[26px] w-[26px] text-[#ED4956]"
+                                className="absolute bottom-0 h-[26px] w-[26px]"
                                 fill="currentColor"
-                                style={{ left: `${30 + h.left}%`, ['--drift' as string]: `${h.drift}px`, animation: 'live-heart-rise 1.8s ease-out forwards' }}
+                                style={{ color: HEART, left: `${30 + h.left}%`, ['--drift' as string]: `${h.drift}px`, animation: 'live-heart-rise 1.8s ease-out forwards' }}
                             />
                         ))}
                     </div>
 
                     <button
                         type="button"
-                        aria-label={t('photogram.flipCamera', 'Flip camera')}
+                        aria-label={t('vibez.flipCamera', 'Flip camera')}
                         aria-pressed={selfie}
                         onClick={toggleSelfie}
                         className={[
@@ -291,9 +285,10 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
                     </button>
                     <button
                         type="button"
-                        aria-label={t('photogram.sendHeart', 'Send heart')}
+                        aria-label={t('vibez.sendHeart', 'Send heart')}
                         onClick={sendHeart}
-                        className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-black/45 text-[#ED4956] backdrop-blur-md active:scale-90"
+                        className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-black/45 backdrop-blur-md active:scale-90"
+                        style={{ color: HEART }}
                     >
                         <Heart className="h-[24px] w-[24px]" fill="currentColor" strokeWidth={2} />
                     </button>
@@ -302,10 +297,10 @@ export function LiveStream({ onClose }: { onClose: () => void }) {
 
             {confirmEnd && (
                 <AlertDialog
-                    title={t('photogram.endLiveTitle', 'End Live Video?')}
-                    message={t('photogram.endLiveMessage', 'Your live video will end and viewers will be disconnected.')}
-                    confirmLabel={t('photogram.end', 'End')}
-                    cancelLabel={t('photogram.cancel', 'Cancel')}
+                    title={t('vibez.endLiveTitle', 'End LIVE?')}
+                    message={t('vibez.endLiveMessage', 'Your live will end and viewers will be disconnected.')}
+                    confirmLabel={t('vibez.end', 'End')}
+                    cancelLabel={t('vibez.cancel', 'Cancel')}
                     destructive
                     forceDark
                     onCancel={() => setConfirmEnd(false)}

@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { Eye, Heart, X } from 'lucide-react';
+import { BadgeCheck, Eye, Heart, X } from 'lucide-react';
 
 import { t } from '@/i18n';
 import { formatDuration } from '@/lib/time';
 import { useNuiEvent } from '@/hooks/useNuiEvent';
 import { useDeckActive } from '@/shell/deckActive';
 import { useStatusBarLight } from '@/shell/useStatusBarLight';
-import { apiLiveJoin, apiLiveLeave, apiLiveComment, apiLiveHeart, type LiveComment } from '../photogramApi';
 import { LiveVideoPlayer, base64ToBytes, liveVideoPlaybackSupported } from '@/shared/liveMedia';
-import { type User } from '../data';
-import { VerifiedCheck } from '../ui';
+import { GRAD_FROM, GRAD_TO, HEART, type VUser } from '../data';
+import { apiLiveJoin, apiLiveLeave, apiLiveComment, apiLiveHeart } from '../vibezApi';
+import { LiveCommentRow, type LiveComment } from './LiveComment';
 
 interface FloatHeart { id: number; drift: number; left: number; }
 
-export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: User; onClose: () => void }) {
+export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: VUser; onClose: () => void }) {
     const [frame,    setFrame]    = useState<string | null>(null);
     const [hasVideo, setHasVideo] = useState(false);
     const [viewers,  setViewers]  = useState(1);
@@ -86,25 +86,25 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
         }
     }
 
-    useNuiEvent('sd-phone:photogram:liveFrame', (data: { liveId?: string; frame?: string } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveFrame', (data: { liveId?: string; frame?: string } | undefined) => {
         if (!forUs(data?.liveId) || !data?.frame) return;
         setFrame(data.frame);
     });
-    useNuiEvent('sd-phone:photogram:liveChunk', (data: { liveId?: string; chunk?: string; init?: boolean; mime?: string } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveChunk', (data: { liveId?: string; chunk?: string; init?: boolean; mime?: string } | undefined) => {
         if (!forUs(data?.liveId) || !data?.chunk) return;
         ingestChunk(data.chunk, data.init === true, data.mime);
     });
-    useNuiEvent('sd-phone:photogram:liveComment', (data: { liveId?: string; comment?: LiveComment } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveComment', (data: { liveId?: string; comment?: LiveComment } | undefined) => {
         if (!forUs(data?.liveId) || !data?.comment) return;
         setComments(prev => [...prev.slice(-5), data.comment as LiveComment]);
     });
-    useNuiEvent('sd-phone:photogram:liveHeart', (data: { liveId?: string } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveHeart', (data: { liveId?: string } | undefined) => {
         if (forUs(data?.liveId)) spawnHearts(1);
     });
-    useNuiEvent('sd-phone:photogram:liveViewers', (data: { liveId?: string; viewers?: number } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveViewers', (data: { liveId?: string; viewers?: number } | undefined) => {
         if (forUs(data?.liveId) && typeof data?.viewers === 'number') setViewers(data.viewers);
     });
-    useNuiEvent('sd-phone:photogram:liveEnded', (data: { liveId?: string } | undefined) => {
+    useNuiEvent('sd-phone:vibez:liveEnded', (data: { liveId?: string } | undefined) => {
         if (forUs(data?.liveId)) setEnded(true);
     });
 
@@ -147,7 +147,7 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
                 ? <img src={frame} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
                 : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <img src={host.avatar} alt="" draggable={false} className="h-[88px] w-[88px] rounded-full object-cover opacity-90" />
-                    <div className="text-[15px] text-white/70">{t('photogram.connectingToLive', "Connecting to {handle}'s live…", { handle: host.handle })}</div>
+                    <div className="text-[15px] text-white/70">{t('vibez.connectingToLive', "Connecting to {handle}'s LIVE…", { handle: host.handle })}</div>
                   </div>)}
 
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/60" />
@@ -157,10 +157,18 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
                     <span className="flex items-center gap-1.5 rounded-full bg-black/45 py-[3px] pl-[3px] pr-2.5 backdrop-blur-sm">
                         <img src={host.avatar} alt="" draggable={false} className="h-[26px] w-[26px] rounded-full object-cover" />
                         <span className="inline-flex items-center gap-1 text-[14px] font-semibold">
-                            {host.handle}{host.verified && <VerifiedCheck size={13} />}
+                            {host.handle}
+                            {host.verified && (
+                                <BadgeCheck className="h-[13px] w-[13px]" style={{ color: GRAD_FROM, fill: GRAD_FROM }} stroke="#000" strokeWidth={1.6} />
+                            )}
                         </span>
                     </span>
-                    <span className="rounded-[7px] bg-[#ED4956] px-2 py-[3px] text-[12px] font-bold uppercase tracking-wide">{t('photogram.live', 'Live')}</span>
+                    <span
+                        className="rounded-[7px] px-2 py-[3px] text-[12px] font-bold uppercase tracking-wide"
+                        style={{ background: `linear-gradient(135deg, ${GRAD_FROM}, ${GRAD_TO})` }}
+                    >
+                        {t('vibez.live', 'LIVE')}
+                    </span>
                     <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-[5px] text-[13px] font-semibold tabular-nums backdrop-blur-sm">
                         <Eye className="h-[14px] w-[14px]" strokeWidth={2.4} />
                         {viewers.toLocaleString()}
@@ -169,7 +177,7 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
                 <button
                     type="button"
                     onClick={() => onClose()}
-                    aria-label={t('photogram.leaveLiveVideo', 'Leave live video')}
+                    aria-label={t('vibez.leaveLive', 'Leave live')}
                     className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-black/45 backdrop-blur-sm active:scale-90"
                 >
                     <X className="h-[20px] w-[20px]" strokeWidth={2.4} />
@@ -186,26 +194,16 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
 
             <div className="relative z-20 flex shrink-0 items-end justify-between gap-3 px-4 pb-2">
                 <div className="flex min-w-0 flex-1 flex-col justify-end gap-2">
-                    {comments.map(c => (
-                        <div key={c.id} className="flex items-start gap-2" style={{ animation: 'live-comment-in 0.25s ease-out' }}>
-                            <img src={c.user.avatar} alt="" draggable={false} className="mt-[1px] h-[28px] w-[28px] shrink-0 rounded-full object-cover" />
-                            <div className="min-w-0 text-[14px] leading-snug" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}>
-                                <span className="inline-flex items-center gap-1 font-semibold">
-                                    {c.user.handle}{c.user.verified && <VerifiedCheck size={13} />}
-                                </span>
-                                <span className="ml-1.5 text-white/95">{c.text}</span>
-                            </div>
-                        </div>
-                    ))}
+                    {comments.map(c => <LiveCommentRow key={c.id} comment={c} />)}
                 </div>
                 <div className="pointer-events-none relative h-[180px] w-[60px] shrink-0">
                     {hearts.map(h => (
                         <Heart
                             key={h.id}
                             onAnimationEnd={() => setHearts(prev => prev.filter(x => x.id !== h.id))}
-                            className="absolute bottom-0 h-[26px] w-[26px] text-[#ED4956]"
+                            className="absolute bottom-0 h-[26px] w-[26px]"
                             fill="currentColor"
-                            style={{ left: `${30 + h.left}%`, ['--drift' as string]: `${h.drift}px`, animation: 'live-heart-rise 1.8s ease-out forwards' }}
+                            style={{ color: HEART, left: `${30 + h.left}%`, ['--drift' as string]: `${h.drift}px`, animation: 'live-heart-rise 1.8s ease-out forwards' }}
                         />
                     ))}
                 </div>
@@ -216,15 +214,16 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
                     value={draft}
                     onChange={e => setDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); sendComment(); } }}
-                    placeholder={t('photogram.addComment', 'Add a comment…')}
+                    placeholder={t('vibez.addComment', 'Add a comment…')}
                     spellCheck={false}
                     className="h-[44px] min-w-0 flex-1 rounded-full border border-white/30 bg-black/35 px-4 text-[15px] text-white outline-none backdrop-blur-sm placeholder:text-white/55"
                 />
                 <button
                     type="button"
-                    aria-label={t('photogram.sendHeart', 'Send heart')}
+                    aria-label={t('vibez.sendHeart', 'Send heart')}
                     onClick={sendHeart}
-                    className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-black/35 text-[#ED4956] backdrop-blur-sm active:scale-90"
+                    className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-black/35 backdrop-blur-sm active:scale-90"
+                    style={{ color: HEART }}
                 >
                     <Heart className="h-[24px] w-[24px]" fill="currentColor" strokeWidth={2} />
                 </button>
@@ -234,15 +233,15 @@ export function LiveViewer({ liveId, host, onClose }: { liveId: string; host: Us
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/75 backdrop-blur-sm">
                     <img src={host.avatar} alt="" draggable={false} className="h-[84px] w-[84px] rounded-full object-cover" />
                     <div className="text-center">
-                        <div className="text-[20px] font-semibold">{t('photogram.liveHasEnded', 'Live has ended')}</div>
-                        <div className="mt-1 text-[15px] text-white/65">{t('photogram.liveVideoOver', "{handle}'s live video is over.", { handle: host.handle })}</div>
+                        <div className="text-[20px] font-semibold">{t('vibez.liveHasEnded', 'LIVE has ended')}</div>
+                        <div className="mt-1 text-[15px] text-white/65">{t('vibez.liveOver', "{handle}'s live is over.", { handle: host.handle })}</div>
                     </div>
                     <button
                         type="button"
                         onClick={() => onClose()}
                         className="mt-1 rounded-full bg-white px-6 py-2.5 text-[16px] font-semibold text-black active:opacity-80"
                     >
-                        Done
+                        {t('vibez.done', 'Done')}
                     </button>
                 </div>
             )}
